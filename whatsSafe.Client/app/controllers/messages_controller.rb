@@ -5,10 +5,49 @@ class MessagesController < ApplicationController
   # GET /messages
   # GET /messages.json
   def index
-    response = HTTParty.get('http://10.70.16.223:3001/'+$gUsername+'/message?timestamp='+Time.now.to_i.to_s+'&signature=signature',
+    @messages=[] 
+    timestamp = Time.now.to_i
+    data = $gUsername.to_s+timestamp.to_s
+    digest = OpenSSL::Digest::SHA256.new
+    signature = $gPrivkey_user.sign digest, data
+
+    response = HTTParty.get($URL+$gUsername+'/message',
+      :body => {  :timestamp => timestamp, 
+                  :signature => Base64.strict_encode64(signature)
+                }.to_json,
     :headers => { 'Content-Type' => 'application/json' })
-    body = JSON.parse(response.body)
-    @message = body
+    # => Krypto-Vorbereitung
+    response.each do |r|
+    sig_recipient = Base64.strict_decode64(r["sig_recipient"])
+    sender = r["sender"]
+    puts sender
+    encrypted_message = Base64.strict_decode64(r["cipher"])
+    iv = Base64.strict_decode64(r["iv"])
+    key_recipient_enc = Base64.strict_decode64(r["key_recipient_enc"])
+
+    key_recipient = $gPrivkey_user.private_decrypt key_recipient_enc
+
+
+    decipher = OpenSSL::Cipher.new('AES-128-CBC')
+    decipher.decrypt
+    decipher.key = key_recipient
+    decipher.iv = iv
+    decrypted_message = decipher.update(encrypted_message) + decipher.final
+
+
+    data = sender.to_s + encrypted_message.to_s + iv.to_s + key_recipient_enc.to_s
+    digest = OpenSSL::Digest::SHA256.new
+    # => Pubkey des Users, an den die Nachricht bestimmt ist.
+    pubkey = OpenSSL::PKey::RSA.new($gPubkey_user)
+    # => Empfang der Parameter
+    
+    if pubkey.verify digest, sig_recipient, data
+      message = Message.new(:username => sender, :message => decrypted_message)
+      @messages<<message
+    else
+      @notice 
+    end
+    end
   end
 
   # GET /messages/1
@@ -30,7 +69,7 @@ class MessagesController < ApplicationController
   def create
     @message = Message.new(message_params)
 
-    pubkeyResponse = HTTParty.get('http://10.70.16.223:3001/'+@message.username+'/pubkey',
+    pubkeyResponse = HTTParty.get($URL+@message.username+'/pubkey',
     :headers => { 'Content-Type' => 'application/json' })
     pubkeyBody = JSON.parse(pubkeyResponse.body)   
     pk = Base64.strict_decode64(pubkeyBody["pubkey_user"])
@@ -45,8 +84,9 @@ class MessagesController < ApplicationController
 
     key_recipient_enc = pubkey_recipient.public_encrypt key_recipient
 
+    data = $gUsername.to_s + encrypted_message.to_s + iv.to_s + key_recipient_enc.to_s
     digest = OpenSSL::Digest::SHA256.new
-    sig_recipient = $gPrivkey_user.sign digest, $gUsername + encrypted_message + iv + key_recipient_enc
+    sig_recipient = $gPrivkey_user.sign digest, data
 
     timestamp = Time.now.to_i
 
@@ -55,7 +95,7 @@ class MessagesController < ApplicationController
     digest = OpenSSL::Digest::SHA256.new
     sig_service = $gPrivkey_user.sign digest, data
 
-    response = HTTParty.post('http://10.70.16.223:3001/'+@message.username+'/message', 
+    response = HTTParty.post($URL+@message.username+'/message', 
     :body => { :outerMessage => { :timestamp => timestamp, 
                           :sig_service => Base64.strict_encode64(sig_service),
                           :sender => $gUsername, 
@@ -104,4 +144,4 @@ class MessagesController < ApplicationController
     def message_params
       params.require(:message).permit(:username, :message)
     end
-end
+  end

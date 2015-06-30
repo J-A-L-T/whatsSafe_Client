@@ -40,7 +40,7 @@ class UsersController < ApplicationController
       cipher.key = masterkey
       privkey_user_enc = cipher.update(private_key) + cipher.final
 
-      response = HTTParty.post($URL+'/user', 
+      response = HTTParty.post($URL+'user', 
       :body => { :user => { :username => @user.name, 
                             :salt_masterkey => Base64.strict_encode64(salt_masterkey),
                             :pubkey_user => Base64.strict_encode64(public_key), 
@@ -55,7 +55,7 @@ class UsersController < ApplicationController
     end
   end
     if params[:commit] == 'Einloggen' || 'Registrieren'
-      response = HTTParty.get($URL+'/'+@user.name, 
+      response = HTTParty.get($URL+@user.name, 
       :headers => { 'Content-Type' => 'application/json' })
       # Masterkey bilden mit passwort und saltmasterkey
       # Sachen lokal ablegen
