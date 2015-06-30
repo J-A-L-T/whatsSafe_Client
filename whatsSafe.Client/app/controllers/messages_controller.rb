@@ -4,7 +4,10 @@ class MessagesController < ApplicationController
   # GET /messages
   # GET /messages.json
   def index
-    @messages = Message.all
+    response = HTTParty.get('http://10.70.16.223:3001/Lukas/message?timestamp='+Time.now.to_i.to_s+'&signature=signature',
+    :headers => { 'Content-Type' => 'application/json' })
+    body = JSON.parse(response.body)
+    @message = body
   end
 
   # GET /messages/1
@@ -26,15 +29,18 @@ class MessagesController < ApplicationController
   def create
     @message = Message.new(message_params)
 
-    respond_to do |format|
-      if @message.save
-        format.html { redirect_to @message, notice: 'Message was successfully created.' }
-        format.json { render :show, status: :created, location: @message }
-      else
-        format.html { render :new }
-        format.json { render json: @message.errors, status: :unprocessable_entity }
-      end
-    end
+    response = HTTParty.post('http://10.70.16.223:3001/'+@message.username+'/message', 
+    :body => { :outerMessage => { :timestamp => Time.now.to_i, 
+                          :sig_service => 'test',
+                          :sender => 'Jan', 
+                          :cipher => @message.message,
+                          :iv => 'Test',
+                          :key_recipient_enc => 'Test',
+                          :sig_recipient => 'Test'
+                        }
+             }.to_json,
+    :headers => { 'Content-Type' => 'application/json' })
+    redirect_to '/messages'
   end
 
   # PATCH/PUT /messages/1
@@ -69,6 +75,6 @@ class MessagesController < ApplicationController
 
     # Never trust parameters from the scary internet, only allow the white list through.
     def message_params
-      params.require(:message).permit(:sender, :message)
+      params.require(:message).permit(:username, :message)
     end
 end

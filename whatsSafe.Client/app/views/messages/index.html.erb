@@ -1,6 +1,9 @@
 <p id="notice"><%= notice %></p>
+<%= link_to 'New Message', new_message_path %>
+<h1>Posteingang</h1>
 
-<h1>Listing Messages</h1>
+<%= @message %>
+
 
 <table>
   <thead>
@@ -12,18 +15,10 @@
   </thead>
 
   <tbody>
-    <% @messages.each do |message| %>
-      <tr>
-        <td><%= message.sender %></td>
-        <td><%= message.message %></td>
-        <td><%= link_to 'Show', message %></td>
-        <td><%= link_to 'Edit', edit_message_path(message) %></td>
-        <td><%= link_to 'Destroy', message, method: :delete, data: { confirm: 'Are you sure?' } %></td>
-      </tr>
-    <% end %>
+    
   </tbody>
 </table>
 
 <br>
 
-<%= link_to 'New Message', new_message_path %>
+

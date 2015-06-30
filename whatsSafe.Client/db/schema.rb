@@ -14,7 +14,7 @@
 ActiveRecord::Schema.define(version: 20150629094248) do
 
   create_table "messages", force: :cascade do |t|
-    t.string   "sender"
+    t.string   "username"
     t.text     "message"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

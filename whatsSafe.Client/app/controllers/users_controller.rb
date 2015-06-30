@@ -26,14 +26,20 @@ class UsersController < ApplicationController
   def create
     @user = User.new(user_params)
 
-    respond_to do |format|
-      if @user.save
-        format.html { redirect_to @user, notice: 'User was successfully created.' }
-        format.json { render :show, status: :created, location: @user }
-      else
-        format.html { render :new }
-        format.json { render json: @user.errors, status: :unprocessable_entity }
-      end
+    response = HTTParty.post('http://10.70.16.223:3001/user', 
+    :body => { :user => { :username => @user.name, 
+                          :salt_masterkey => '1234567890',
+                          :pubkey_user => '1234567890', 
+                          :privkey_user_enc => '1234567890'
+                        }
+             }.to_json,
+    :headers => { 'Content-Type' => 'application/json' })
+
+    if response.code == 201
+      redirect_to '/messages'
+      # render json: {"Status" => "201 - created"}
+    else
+      render json: {"Status" => "Error"}
     end
   end
 
