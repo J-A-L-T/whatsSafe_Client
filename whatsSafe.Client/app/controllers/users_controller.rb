@@ -40,7 +40,7 @@ class UsersController < ApplicationController
       cipher.key = masterkey
       privkey_user_enc = cipher.update(private_key) + cipher.final
 
-      response = HTTParty.post('http://10.70.16.223:3001/user', 
+      response = HTTParty.post($URL+'/user', 
       :body => { :user => { :username => @user.name, 
                             :salt_masterkey => Base64.strict_encode64(salt_masterkey),
                             :pubkey_user => Base64.strict_encode64(public_key), 
@@ -55,14 +55,15 @@ class UsersController < ApplicationController
     end
   end
     if params[:commit] == 'Einloggen' || 'Registrieren'
-      response = HTTParty.get('http://10.70.16.223:3001/'+@user.name, 
+      response = HTTParty.get($URL+'/'+@user.name, 
       :headers => { 'Content-Type' => 'application/json' })
       # Masterkey bilden mit passwort und saltmasterkey
       # Sachen lokal ablegen
+      $gUsername = @user.name
       password = @user.password
       jsonResponse = JSON.parse(response.body)
       salt_masterkey = Base64.strict_decode64(jsonResponse["salt_masterkey"])
-      pubkey_user = Base64.strict_decode64(jsonResponse["pubkey_user"])
+      $gPubkey_user = Base64.strict_decode64(jsonResponse["pubkey_user"])
       privkey_user_enc = Base64.strict_decode64(jsonResponse["privkey_user_enc"])
       i = 10000
       digest = OpenSSL::Digest::SHA256.new
@@ -70,7 +71,7 @@ class UsersController < ApplicationController
       cipher = OpenSSL::Cipher.new('AES-128-ECB')
       cipher.decrypt
       cipher.key = masterkey
-      privkey_user = cipher.update(privkey_user_enc) + cipher.final
+      $gPrivkey_user = OpenSSL::PKey::RSA.new(cipher.update(privkey_user_enc) + cipher.final)
 
       redirect_to '/messages'
   end

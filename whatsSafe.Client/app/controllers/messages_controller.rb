@@ -1,10 +1,11 @@
+require 'openssl'
 class MessagesController < ApplicationController
   before_action :set_message, only: [:show, :edit, :update, :destroy]
 
   # GET /messages
   # GET /messages.json
   def index
-    response = HTTParty.get('http://10.70.16.223:3001/Lukas/message?timestamp='+Time.now.to_i.to_s+'&signature=signature',
+    response = HTTParty.get('http://10.70.16.223:3001/'+$gUsername+'/message?timestamp='+Time.now.to_i.to_s+'&signature=signature',
     :headers => { 'Content-Type' => 'application/json' })
     body = JSON.parse(response.body)
     @message = body
@@ -29,17 +30,43 @@ class MessagesController < ApplicationController
   def create
     @message = Message.new(message_params)
 
+    pubkeyResponse = HTTParty.get('http://10.70.16.223:3001/'+@message.username+'/pubkey',
+    :headers => { 'Content-Type' => 'application/json' })
+    pubkeyBody = JSON.parse(pubkeyResponse.body)   
+    pk = Base64.strict_decode64(pubkeyBody["pubkey_user"])
+    pubkey_recipient = OpenSSL::PKey::RSA.new(pk)
+
+    cipher = OpenSSL::Cipher.new('AES-128-CBC')
+    cipher.encrypt
+    key_recipient = cipher.random_key
+    iv = cipher.random_iv 
+
+    encrypted_message = cipher.update(@message.message) + cipher.final
+
+    key_recipient_enc = pubkey_recipient.public_encrypt key_recipient
+
+    digest = OpenSSL::Digest::SHA256.new
+    sig_recipient = $gPrivkey_user.sign digest, $gUsername + encrypted_message + iv + key_recipient_enc
+
+    timestamp = Time.now.to_i
+
+    data = $gUsername.to_s + encrypted_message.to_s + iv + key_recipient_enc.to_s + sig_recipient.to_s + timestamp.to_s + @message.username.to_s
+
+    digest = OpenSSL::Digest::SHA256.new
+    sig_service = $gPrivkey_user.sign digest, data
+
     response = HTTParty.post('http://10.70.16.223:3001/'+@message.username+'/message', 
-    :body => { :outerMessage => { :timestamp => Time.now.to_i, 
-                          :sig_service => 'test',
-                          :sender => 'Jan', 
-                          :cipher => @message.message,
-                          :iv => 'Test',
-                          :key_recipient_enc => 'Test',
-                          :sig_recipient => 'Test'
+    :body => { :outerMessage => { :timestamp => timestamp, 
+                          :sig_service => Base64.strict_encode64(sig_service),
+                          :sender => $gUsername, 
+                          :cipher => Base64.strict_encode64(encrypted_message),
+                          :iv => Base64.strict_encode64(iv),
+                          :key_recipient_enc => Base64.strict_encode64(key_recipient_enc),
+                          :sig_recipient => Base64.strict_encode64(sig_recipient)
                         }
              }.to_json,
     :headers => { 'Content-Type' => 'application/json' })
+
     redirect_to '/messages'
   end
 
