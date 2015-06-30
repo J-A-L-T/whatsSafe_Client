@@ -1,3 +1,4 @@
+require 'openssl' # Dokumentation dazu: http://ruby-doc.org/stdlib-2.0/libdoc/openssl/rdoc/OpenSSL.html
 class UsersController < ApplicationController
   before_action :set_user, only: [:show, :edit, :update, :destroy]
 
@@ -22,19 +23,57 @@ class UsersController < ApplicationController
   end
 
   # POST /users
-  # POST /users.json
+  # POST /users.json   
   def create
     @user = User.new(user_params)
+    if params[:commit] == 'Registrieren'
+      salt_masterkey = OpenSSL::Random.random_bytes 64
+      i = 10000
+      digest = OpenSSL::Digest::SHA256.new
+      masterkey = OpenSSL::PKCS5.pbkdf2_hmac(@user.password, salt_masterkey, i, 256, digest)
+      key = OpenSSL::PKey::RSA.new(2048)
+      private_key = key.to_pem
+      puts private_key
+      public_key = key.public_key.to_pem
+      cipher = OpenSSL::Cipher.new('AES-128-ECB')
+      cipher.encrypt
+      cipher.key = masterkey
+      privkey_user_enc = cipher.update(private_key) + cipher.final
 
-    respond_to do |format|
-      if @user.save
-        format.html { redirect_to @user, notice: 'User was successfully created.' }
-        format.json { render :show, status: :created, location: @user }
+      response = HTTParty.post($URL+'user', 
+      :body => { :user => { :username => @user.name, 
+                            :salt_masterkey => Base64.strict_encode64(salt_masterkey),
+                            :pubkey_user => Base64.strict_encode64(public_key), 
+                            :privkey_user_enc => Base64.strict_encode64(privkey_user_enc)
+                          }
+               }.to_json,
+      :headers => { 'Content-Type' => 'application/json' })
+      if response.code == 201
+        # render json: {"Status" => "201 - created"}
       else
-        format.html { render :new }
-        format.json { render json: @user.errors, status: :unprocessable_entity }
-      end
+        # render json: {"Status" => "Error"}
     end
+  end
+    if params[:commit] == 'Einloggen' || 'Registrieren'
+      response = HTTParty.get($URL+@user.name, 
+      :headers => { 'Content-Type' => 'application/json' })
+      # Masterkey bilden mit passwort und saltmasterkey
+      # Sachen lokal ablegen
+      $gUsername = @user.name
+      password = @user.password
+      jsonResponse = JSON.parse(response.body)
+      salt_masterkey = Base64.strict_decode64(jsonResponse["salt_masterkey"])
+      $gPubkey_user = Base64.strict_decode64(jsonResponse["pubkey_user"])
+      privkey_user_enc = Base64.strict_decode64(jsonResponse["privkey_user_enc"])
+      i = 10000
+      digest = OpenSSL::Digest::SHA256.new
+      masterkey = OpenSSL::PKCS5.pbkdf2_hmac(password, salt_masterkey, i, 256, digest)
+      cipher = OpenSSL::Cipher.new('AES-128-ECB')
+      cipher.decrypt
+      cipher.key = masterkey
+      $gPrivkey_user = OpenSSL::PKey::RSA.new(cipher.update(privkey_user_enc) + cipher.final)
+
+      redirect_to '/messages'
   end
 
   # PATCH/PUT /users/1
@@ -48,6 +87,7 @@ class UsersController < ApplicationController
         format.html { render :edit }
         format.json { render json: @user.errors, status: :unprocessable_entity }
       end
+    end
     end
   end
 

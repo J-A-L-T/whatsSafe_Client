@@ -10,16 +10,17 @@
       </ul>
     </div>
   <% end %>
-
+<div class="form-group">
   <div class="field">
-    <%= f.label :sender %><br>
-    <%= f.text_field :sender %>
+    <%= f.label :username %><br>
+    <%= f.text_field :username, :class => "form-control" %>
   </div>
   <div class="field">
     <%= f.label :message %><br>
-    <%= f.text_area :message %>
+    <%= f.text_area :message, :class => "form-control" %>
   </div>
   <div class="actions">
-    <%= f.submit %>
+    <%= f.submit class: "form-control btn btn-md btn-success" %>
+  </div>
   </div>
 <% end %>
