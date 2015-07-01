@@ -45,6 +45,8 @@
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
         </button>
+        <div class="row">
+    <div class="col-md-8 col-md-offset-2">
         <a class="navbar-brand" href="#">WhatsSafeClient</a>
         <div class="navbar-collapse collapse navbar-responsive-collapse">
           <ul class="nav navbar-nav">
@@ -52,24 +54,31 @@
             <li><%= link_to "Posteingang", "/messages"  %></li>
             <li><%= link_to "Neue Nachricht", "/messages/new"  %></li>
             <li><%= link_to "Adressbuch", "/users"  %></li>
-            <li><%= link_to "Ausloggen", "/users/logout" %></li class="nav navbar-nav navbar-right">
+            <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><%=$gUsername%> <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+            <li><%= link_to "Ausloggen", "/users/logout" %></li>
+            </ul>
+            </li>
           <%end%>
           </ul>
         </div>
       </div>
     </div>
+    </div>
+    </div>
 
     <div class="container">
       <div class="row">
-        <div class="col-lg-6">
-          <%= bootstrap_flash %>
           <%= yield %>
-        </div>
-      </div>  
-
-      <footer>
-        <p>&copy; JALT 2015</p>
-      </footer>
+      </div>
+      <div class="row">
+        <div class="col-md-2 col-md-offset-5">
+        <footer>
+          <p class="center">&copy; JALT 2015</p>
+        </footer>
+      </div>
+      </div>
 
     </div> <!-- /container -->
 

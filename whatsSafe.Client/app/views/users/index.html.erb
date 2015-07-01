@@ -1,18 +1,23 @@
-<p id="notice"><%= notice %></p>
-
+<div class="row">
+    <div class="col-md-4 col-md-offset-4">
+    <%= bootstrap_flash %>
 <h1>Adressbuch</h1>
 
-<table>
+<table class="table table-striped">
   <thead>
     <tr>
+    <th>#</th>
       <th>Name</th>
     </tr>
   </thead>
 
   <tbody>
+    <% @i=1 %>
     <% @users.each do |user| %>
       <tr>
-        <td><%= user.name %></td>
+        <td><%= @i.to_s+"." %></td>
+        <% @i=@i+1 %>
+        <td><%= user%></td>
       </tr>
     <% end %>
   </tbody>

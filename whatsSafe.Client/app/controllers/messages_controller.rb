@@ -66,6 +66,14 @@ class MessagesController < ApplicationController
   def new
     if $gUsername != ""
     @message = Message.new
+    @users=[]
+    response = HTTParty.get($URL,
+    :body => {},
+    :headers => { 'Content-Type' => 'application/json' })
+    response.each do |r|
+    username = r["username"]
+      @users<<username
+    end
     else
         respond_to do |format|
             format.html { redirect_to '/', alert: "Sie sind nicht eingeloggt." }

@@ -10,8 +10,7 @@ class UsersController < ApplicationController
     :headers => { 'Content-Type' => 'application/json' })
     response.each do |r|
     username = r["username"]
-    user = User.new(:name => username)
-      @users<<user
+    @users<<username
     end
         else
         respond_to do |format|

@@ -1,3 +1,6 @@
+<div class="row">
+    <div class="col-md-4 col-md-offset-4">
+    <%= bootstrap_flash %>
 <h1>Benutzer</h1>
 <%= form_for(@user) do |f| %>
   <% if @user.errors.any? %>
@@ -13,18 +16,20 @@
   <% end %>
 <div class="form-group">
   <div class="field">
-    <%= f.label :name %><br>
+    <%= f.label "Benuter" %><br>
     <%= f.text_field :name, :class => "form-control" %>
   </div>
   <div class="field">
-    <%= f.label :password %><br>
+    <%= f.label "Passwort" %><br>
     <%= f.password_field :password, :class => "form-control" %>
   </div>
   <div class="actions">
-   <%= f.submit 'Registrieren' %>
-   <%= f.submit 'Einloggen' %>
+   <p><%= f.submit 'Registrieren', :class =>  "form-control btn btn-md btn-success" %></p>
+   <p><%= f.submit 'Einloggen', :class =>  "form-control btn btn-md btn-primary" %></p>
   </div>
   </div>
 <% end %>
+</div>
+</div>
 
 
