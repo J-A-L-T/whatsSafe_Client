@@ -5,7 +5,15 @@ class UsersController < ApplicationController
   # GET /users
   # GET /users.json
   def index
-    @users = User.all
+    @users=[]
+    response = HTTParty.get($URL,
+    :body => {},
+    :headers => { 'Content-Type' => 'application/json' })
+    response.each do |r|
+    username = r["username"]
+    user = User.new(:name => username)
+      @users<<user
+    end
   end
 
   # GET /users/1
@@ -13,9 +21,20 @@ class UsersController < ApplicationController
   def show
   end
 
+  def logout
+    $gUsername = ""
+    $gPrivkey_user = ""
+    $gPubkey_user = ""
+    redirect_to '/'
+  end
+
   # GET /users/new
   def new
-    @user = User.new
+    if $gUsername != ""      
+      redirect_to '/messages'
+    else
+      @user = User.new
+    end
   end
 
   # GET /users/1/edit
@@ -26,6 +45,7 @@ class UsersController < ApplicationController
   # POST /users.json   
   def create
     @user = User.new(user_params)
+    success = true
     if params[:commit] == 'Registrieren'
       salt_masterkey = OpenSSL::Random.random_bytes 64
       i = 10000
@@ -48,33 +68,56 @@ class UsersController < ApplicationController
                           }
                }.to_json,
       :headers => { 'Content-Type' => 'application/json' })
-      if response.code == 201
-        # render json: {"Status" => "201 - created"}
-      else
-        # render json: {"Status" => "Error"}
-    end
-  end
-    if params[:commit] == 'Einloggen' || 'Registrieren'
-      response = HTTParty.get($URL+@user.name, 
-      :headers => { 'Content-Type' => 'application/json' })
-      # Masterkey bilden mit passwort und saltmasterkey
-      # Sachen lokal ablegen
-      $gUsername = @user.name
-      password = @user.password
-      jsonResponse = JSON.parse(response.body)
-      salt_masterkey = Base64.strict_decode64(jsonResponse["salt_masterkey"])
-      $gPubkey_user = Base64.strict_decode64(jsonResponse["pubkey_user"])
-      privkey_user_enc = Base64.strict_decode64(jsonResponse["privkey_user_enc"])
-      i = 10000
-      digest = OpenSSL::Digest::SHA256.new
-      masterkey = OpenSSL::PKCS5.pbkdf2_hmac(password, salt_masterkey, i, 256, digest)
-      cipher = OpenSSL::Cipher.new('AES-128-ECB')
-      cipher.decrypt
-      cipher.key = masterkey
-      $gPrivkey_user = OpenSSL::PKey::RSA.new(cipher.update(privkey_user_enc) + cipher.final)
-
-      redirect_to '/messages'
-  end
+      case response.code
+        when 409
+          @success = false
+          respond_to do |format|
+          format.html { redirect_to '/users/new', alert: "Benutzername bereits vergeben." }
+          end
+        end
+      end
+        if (params[:commit] == 'Einloggen' || 'Registrieren') && success == true
+          response = HTTParty.get($URL+@user.name, 
+          :headers => { 'Content-Type' => 'application/json' })
+          case response.code
+          when 404
+            respond_to do |format|
+            format.html { redirect_to '/users/new', alert: "Anmeldung fehlgeschlagen" }
+          end
+          else
+          # Masterkey bilden mit passwort und saltmasterkey
+          # Sachen lokal 
+          $gUsername = @user.name
+          password = @user.password
+          jsonResponse = JSON.parse(response.body)
+          salt_masterkey = Base64.strict_decode64(jsonResponse["salt_masterkey"])
+          $gPubkey_user = Base64.strict_decode64(jsonResponse["pubkey_user"])
+          privkey_user_enc = Base64.strict_decode64(jsonResponse["privkey_user_enc"])
+          i = 10000
+          digest = OpenSSL::Digest::SHA256.new
+          masterkey = OpenSSL::PKCS5.pbkdf2_hmac(password, salt_masterkey, i, 256, digest)
+          cipher = OpenSSL::Cipher.new('AES-128-ECB')
+          cipher.decrypt
+          cipher.key = masterkey
+          begin
+          $gPrivkey_user = OpenSSL::PKey::RSA.new(cipher.update(privkey_user_enc) + cipher.final)
+          rescue OpenSSL::Cipher::CipherError
+            $gUsername = ""
+            $gPubkey_user = ""
+            $gPrivkey_user = ""
+            respond_to do |format|
+            format.html { redirect_to '/users/new', alert: "Anmeldung fehlgeschlagen." }
+            end
+          end
+          if (params[:commit] == 'Registrieren') && $gUsername != ""
+            respond_to do |format|
+            format.html { redirect_to '/messages', notice: "Registrierung erfolgreich." }
+          end
+          elsif (params[:commit] == 'Einloggen') && $gUsername != ""
+              redirect_to '/messages'
+          end
+        end
+      end
 
   # PATCH/PUT /users/1
   # PATCH/PUT /users/1.json
