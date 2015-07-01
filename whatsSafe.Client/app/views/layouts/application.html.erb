@@ -48,9 +48,12 @@
         <a class="navbar-brand" href="#">WhatsSafeClient</a>
         <div class="navbar-collapse collapse navbar-responsive-collapse">
           <ul class="nav navbar-nav">
-            <li><%= link_to "Link1", "/path1"  %></li>
-            <li><%= link_to "Link2", "/path2"  %></li>
-            <li><%= link_to "Link3", "/path3"  %></li>
+          <% if $gUsername != "" %>
+            <li><%= link_to "Posteingang", "/messages"  %></li>
+            <li><%= link_to "Neue Nachricht", "/messages/new"  %></li>
+            <li><%= link_to "Adressbuch", "/users"  %></li>
+            <li><%= link_to "Ausloggen", "/users/logout" %></li class="nav navbar-nav navbar-right">
+          <%end%>
           </ul>
         </div>
       </div>
@@ -58,14 +61,14 @@
 
     <div class="container">
       <div class="row">
-        <div class="col-lg-9">
+        <div class="col-lg-6">
           <%= bootstrap_flash %>
           <%= yield %>
         </div>
       </div>  
 
       <footer>
-        <p>&copy; Company 2015</p>
+        <p>&copy; JALT 2015</p>
       </footer>
 
     </div> <!-- /container -->

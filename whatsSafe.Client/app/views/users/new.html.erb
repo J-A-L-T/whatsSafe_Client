@@ -1,4 +1,4 @@
-<h1>Was möchtest du tun?</h1>
+<h1>Benutzer</h1>
 <%= form_for(@user) do |f| %>
   <% if @user.errors.any? %>
     <div id="error_explanation">
@@ -11,18 +11,19 @@
       </ul>
     </div>
   <% end %>
-
+<div class="form-group">
   <div class="field">
     <%= f.label :name %><br>
-    <%= f.text_field :name %>
+    <%= f.text_field :name, :class => "form-control" %>
   </div>
   <div class="field">
     <%= f.label :password %><br>
-    <%= f.password_field :password %>
+    <%= f.password_field :password, :class => "form-control" %>
   </div>
   <div class="actions">
    <%= f.submit 'Registrieren' %>
    <%= f.submit 'Einloggen' %>
+  </div>
   </div>
 <% end %>
 

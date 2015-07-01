@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  get     "/users/logout",         to: "users#logout"
   resources :messages
   resources :users
   # The priority is based upon order of creation: first created -> highest priority.
