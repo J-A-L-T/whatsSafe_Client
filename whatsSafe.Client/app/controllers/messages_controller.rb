@@ -2,80 +2,79 @@ require 'openssl'
 class MessagesController < ApplicationController
   before_action :set_message, only: [:show, :edit, :update, :destroy]
 
-  # GET /messages
-  # GET /messages.json
   def index
-    @messages=[] 
-    timestamp = Time.now.to_i
-    data = $gUsername.to_s+timestamp.to_s
-    digest = OpenSSL::Digest::SHA256.new
-    signature = $gPrivkey_user.sign digest, data
+    if $gUsername != ""
+      @messages=[] 
+      timestamp = Time.now.to_i
+      data = $gUsername.to_s+timestamp.to_s
+      digest = OpenSSL::Digest::SHA256.new
+      signature = $gPrivkey_user.sign digest, data
 
-    response = HTTParty.get($URL+$gUsername+'/message',
-      :body => {  :timestamp => timestamp, 
-                  :signature => Base64.strict_encode64(signature)
-                }.to_json,
-    :headers => { 'Content-Type' => 'application/json' })
-    case response.code
-      when 200
-        # => Krypto-Vorbereitung
-        response.each do |r|
-          sig_recipient = Base64.strict_decode64(r["sig_recipient"])
-          sender = r["sender"]
-          puts sender
-          encrypted_message = Base64.strict_decode64(r["cipher"])
-          iv = Base64.strict_decode64(r["iv"])
-          key_recipient_enc = Base64.strict_decode64(r["key_recipient_enc"])
+      response = HTTParty.get($URL+$gUsername+'/message',
+        :body => {  :timestamp => timestamp, 
+                    :signature => Base64.strict_encode64(signature)
+                  }.to_json,
+      :headers => { 'Content-Type' => 'application/json' })
+      case response.code
+        when 200
+          # => Krypto-Vorbereitung
+          response.each do |r|
+            sig_recipient = Base64.strict_decode64(r["sig_recipient"])
+            sender = r["sender"]
+            puts sender
+            encrypted_message = Base64.strict_decode64(r["cipher"])
+            iv = Base64.strict_decode64(r["iv"])
+            key_recipient_enc = Base64.strict_decode64(r["key_recipient_enc"])
 
-          key_recipient = $gPrivkey_user.private_decrypt key_recipient_enc
-
-
-          decipher = OpenSSL::Cipher.new('AES-128-CBC')
-          decipher.decrypt
-          decipher.key = key_recipient
-          decipher.iv = iv
-          decrypted_message = decipher.update(encrypted_message) + decipher.final
+            key_recipient = $gPrivkey_user.private_decrypt key_recipient_enc
 
 
-          data = sender.to_s + encrypted_message.to_s + iv.to_s + key_recipient_enc.to_s
-          digest = OpenSSL::Digest::SHA256.new
-          # => Pubkey des Users, an den die Nachricht bestimmt ist.
-          pubkeyResponse = HTTParty.get($URL+sender+'/pubkey',
-          :headers => { 'Content-Type' => 'application/json' })
-          pubkeyBody = JSON.parse(pubkeyResponse.body)   
-          pk = Base64.strict_decode64(pubkeyBody["pubkey_user"])
-          pubkey_sender = OpenSSL::PKey::RSA.new(pk)
-          # => Empfang der Parameter
-          
-          if pubkey_sender.verify digest, sig_recipient, data
-            message = Message.new(:username => sender, :message => decrypted_message)
-            @messages<<message
+            decipher = OpenSSL::Cipher.new('AES-128-CBC')
+            decipher.decrypt
+            decipher.key = key_recipient
+            decipher.iv = iv
+            decrypted_message = decipher.update(encrypted_message) + decipher.final
+
+
+            data = sender.to_s + encrypted_message.to_s + iv.to_s + key_recipient_enc.to_s
+            digest = OpenSSL::Digest::SHA256.new
+            # => Pubkey des Users, an den die Nachricht bestimmt ist.
+            pubkeyResponse = HTTParty.get($URL+sender+'/pubkey',
+            :headers => { 'Content-Type' => 'application/json' })
+            pubkeyBody = JSON.parse(pubkeyResponse.body)   
+            pk = Base64.strict_decode64(pubkeyBody["pubkey_user"])
+            pubkey_sender = OpenSSL::PKey::RSA.new(pk)
+            # => Empfang der Parameter
+            
+            if pubkey_sender.verify digest, sig_recipient, data
+              message = Message.new(:username => sender, :message => decrypted_message)
+              @messages<<message
+            end
+          end
+        else
+          respond_to do |format|
+            format.html { redirect_to messages_url, alert: "Nachrichtenabruf fehlgeschlagen." }
           end
         end
       else
         respond_to do |format|
-          format.html { redirect_to messages_url, alert: "Nachrichtenabruf fehlgeschlagen." }
+            format.html { redirect_to '/', alert: "Sie sind nicht eingeloggt." }
+          end
         end
-      end
     end
-
-  # GET /messages/1
-  # GET /messages/1.json
-  def show
-  end
-
-  # GET /messages/new
+    
   def new
+    if $gUsername != ""
     @message = Message.new
+    else
+        respond_to do |format|
+            format.html { redirect_to '/', alert: "Sie sind nicht eingeloggt." }
+          end
+        end
   end
 
-  # GET /messages/1/edit
-  def edit
-  end
-
-  # POST /messages
-  # POST /messages.json
   def create
+    if $gUsername != ""
     @message = Message.new(message_params)
 
     pubkeyResponse = HTTParty.get($URL+@message.username+'/pubkey',
@@ -133,37 +132,14 @@ class MessagesController < ApplicationController
       end
       end
     end
-  end
-
-  # PATCH/PUT /messages/1
-  # PATCH/PUT /messages/1.json
-  def update
-    respond_to do |format|
-      if @message.update(message_params)
-        format.html { redirect_to @message, notice: 'Message was successfully updated.' }
-        format.json { render :show, status: :ok, location: @message }
-      else
-        format.html { render :edit }
-        format.json { render json: @message.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # DELETE /messages/1
-  # DELETE /messages/1.json
-  def destroy
-    @message.destroy
-    respond_to do |format|
-      format.html { redirect_to messages_url, notice: 'Message was successfully destroyed.' }
-      format.json { head :no_content }
-    end
+          else
+        respond_to do |format|
+            format.html { redirect_to '/', alert: "Sie sind nicht eingeloggt." }
+          end
+        end
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_message
-      @message = Message.find(params[:id])
-    end
 
     # Never trust parameters from the scary internet, only allow the white list through.
     def message_params
