@@ -1,3 +1,32 @@
-<%= link_to 'Back', messages_path,  :class=> 'btn btn-md btn-danger'%>
-<h1>New Message</h1>
-<%= render 'form' %>
+<div class="row">
+    <div class="col-md-6 col-md-offset-3">
+    <%= bootstrap_flash %>
+<h1>Neue Nachricht</h1>
+<%= form_for(@message) do |f| %>
+  <% if @message.errors.any? %>
+    <div id="error_explanation">
+      <h2><%= pluralize(@message.errors.count, "error") %> prohibited this message from being saved:</h2>
+
+      <ul>
+      <% @message.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+      </ul>
+    </div>
+  <% end %>
+<div class="form-group">
+  <div class="field">
+    <%= f.label "Benutzername" %><br>
+    <%= f.select :username, @users, {prompt: "Wähle einen Empfänger"}, {class: "form-control"}%>
+  </div>
+  <div class="field">
+    <%= f.label "Nachricht" %><br>
+    <%= f.text_area :message, :rows => "6", :class => "form-control" %>
+  </div>
+  <div class="actions">
+    <%= f.submit "Nachricht absenden", :class =>  "form-control btn btn-md btn-success" %>
+  </div>
+  </div>
+<% end %>
+</div>
+</div>
