@@ -36,7 +36,7 @@ class UsersController < ApplicationController
 
   def create
     @user = User.new(user_params)
-    success = true
+    @success = true
     if params[:commit] == 'Registrieren'
       salt_masterkey = OpenSSL::Random.random_bytes 64
       i = 10000
@@ -67,7 +67,7 @@ class UsersController < ApplicationController
           end
         end
       end
-        if (params[:commit] == 'Einloggen' || 'Registrieren') && success == true
+        if (params[:commit] == 'Einloggen' || 'Registrieren') && @success == true
           response = HTTParty.get($URL+@user.name, 
           :headers => { 'Content-Type' => 'application/json' })
           case response.code
